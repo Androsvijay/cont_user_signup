@@ -1,0 +1,287 @@
+{
+	"info": {
+		"_postman_id": "8130e600-69ed-44d4-8577-6cd9b8294f89",
+		"name": "Andros_PW_Biz_Contractor Copy",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "Get_AccessToken_User",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"//Base64 URL encoding\r",
+									"function base64url(source) {\r",
+									"  // Encode in classical base64\r",
+									"  encodedSource = CryptoJS.enc.Base64.stringify(source);\r",
+									"  // Remove padding equal characters\r",
+									"  encodedSource = encodedSource.replace(/=+$/, '');\r",
+									"  // Replace characters according to base64url specifications\r",
+									"  encodedSource = encodedSource.replace(/\\+/g, '-');\r",
+									"  encodedSource = encodedSource.replace(/\\//g, '_');\r",
+									"  return encodedSource;\r",
+									"};\r",
+									"//To generate Header and Payload\r",
+									"var header = {\r",
+									"  \"alg\": \"HS256\",\r",
+									"  \"typ\": \"JWT\"\r",
+									"};\r",
+									"var stringifiedHeader = CryptoJS.enc.Utf8.parse(JSON.stringify(header));\r",
+									"var encodedHeader = base64url(stringifiedHeader);\r",
+									"//Unix epoch time formula\r",
+									"var time = Math.floor(new Date().getTime()/1000.0); \r",
+									"var payloaddata = {\r",
+									"  \"ClientId\": \"XgP2E9Myj8FIid7BCMiuKFY\", /*Issuer: Client ID*/\r",
+									"  \"aud\": \"PayWow\", /*Audience: Default PayWow*/\r",
+									"  \"nbf\": time, /*Current UTC date & time*/\r",
+									"  \"iss\": \"email\" /*Issuer:: Default email*/\r",
+									"};\r",
+									"console.log(time);\r",
+									"var stringifiedData = CryptoJS.enc.Utf8.parse(JSON.stringify(payloaddata));\r",
+									"var encodedPayloadData = base64url(stringifiedData);\r",
+									"var headerPayload = encodedHeader + \".\" + encodedPayloadData;\r",
+									"//Client secret ID - To generate JWS\r",
+									"var secretID = \"FjHBgWoh5vrNeP33chu4fX2vNMnENscMjqSs58ZVBls\";\r",
+									"var signature = CryptoJS.HmacSHA256(headerPayload, secretID);\r",
+									"signature = base64url(signature);\r",
+									"var jws = headerPayload + \".\" + signature;\r",
+									"console.log(jws);\r",
+									"pm.environment.set(\"auth\", jws);"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"tests[\"Status code is 200\"] = responseCode.code === 200;\r",
+									"var Authorization = jsonData.AccessToken;\r",
+									"console.log(Authorization);\r",
+									"pm.environment.set(\"AccessToken\", Authorization);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authentication",
+								"value": "{{auth}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{PaywowAPIURL}}auth/getaccesstoken",
+							"host": [
+								"{{PaywowAPIURL}}auth"
+							],
+							"path": [
+								"getaccesstoken"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "User_Signup",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const echoPostRequest = {\r",
+									"  url: 'https://<my url>.auth0.com/oauth/token',\r",
+									"  method: 'POST',\r",
+									"  header: 'Content-Type:application/json',\r",
+									"  body: {\r",
+									"    mode: 'application/json',\r",
+									"    raw: JSON.stringify(\r",
+									"        {\r",
+									"        \tclient_id:'<XgP2E9Myj8FIid7BCMiuKFY>',\r",
+									"        \tclient_secret:'<FjHBgWoh5vrNeP33chu4fX2vNMnENscMjqSs58ZVBls>',\r",
+									"        \taudience:'<my audience>',\r",
+									"        \tgrant_type:'client_credentials'\r",
+									"        })\r",
+									"  }\r",
+									"};\r",
+									"\r",
+									"var getToken = true;\r",
+									"\r",
+									"if (!pm.environment.get('accessTokenExpiry') || \r",
+									"    !pm.environment.get('currentAccessToken')) {\r",
+									"    console.log('Token or expiry date are missing')\r",
+									"} else if (pm.environment.get('accessTokenExpiry') <= (new Date()).getTime()) {\r",
+									"    console.log('Token is expired')\r",
+									"} else {\r",
+									"    getToken = false;\r",
+									"    console.log('Token and expiry date are all good');\r",
+									"}\r",
+									"\r",
+									"if (getToken === true) {\r",
+									"    pm.sendRequest(echoPostRequest, function (err, res) {\r",
+									"    console.log(err ? err : res.json());\r",
+									"        if (err === null) {\r",
+									"            console.log('Saving the token and expiry date')\r",
+									"            var responseJson = res.json();\r",
+									"            pm.environment.set('currentAccessToken', responseJson.access_token)\r",
+									"    \r",
+									"            var expiryDate = new Date();\r",
+									"            expiryDate.setSeconds(expiryDate.getSeconds() + responseJson.expires_in);\r",
+									"            pm.environment.set('accessTokenExpiry', expiryDate.getTime());\r",
+									"        }\r",
+									"    });\r",
+									"}\r",
+									"{\r",
+									" const uuid = require('uuid')\r",
+									" let email=uuid()+'@domain.com'\r",
+									" pm.environment.set('email',email)\r",
+									"}\r",
+									"\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"tests[\"Status code is 200\"] = responseCode.code === 200;\r",
+									"var UserId = jsonData.UserId;\r",
+									"console.log(UserId);\r",
+									"pm.environment.set(\"UserId\", UserId);\r",
+									"\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{AccessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"EmailAddress\": \"andros+{{$timestamp}}@spanllc.com\",\r\n    \"ContactName\": \"Mario Draghi\",\r\n    \"PhoneNumber\": \"(794) 654-6545\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{PaywowAPIURL}}user/signup",
+							"host": [
+								"{{PaywowAPIURL}}user"
+							],
+							"path": [
+								"signup"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create_Business",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);\r",
+									"tests[\"Status code is 200\"] = responseCode.code === 200;\r",
+									"var BizId = jsonData.BusinessId;\r",
+									"console.log(BizId);\r",
+									"pm.environment.set(\"BizId\", BizId);\r",
+									"\r",
+									"var LocaID =jsonData.BusinessLocationId;\r",
+									"console.log(LocaID)\r",
+									"pm.environment.set(\"LocID\",LocaID);\r",
+									"\r",
+									"pm.environment.set('randomNumer_EIN',_.random(10, 99)+'-'+_.random(1000000, 9999999));"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{AccessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"UserId\": \"{{UserId}}\",\r\n    \"IndividualorBusiness\": 176,\r\n    \"BusinessName\": \"{{$randomCompanyName}}\",\r\n    \"TINType\": 938,\r\n    \"EINorSSN\": \"{{randomNumer_EIN}}\",\r\n    \"DoingBusinessAs\": \"\",\r\n    \"BusinessEmailAddress\": \"andros@spanllc.com\",\r\n    \"Phone\": \"(797) 897-8978\",\r\n    \"Fax\": \"\",\r\n    \"PrimaryLocation\": {\r\n        \"AddressLine1\": \"123 Main st\",\r\n        \"AddressLine2\": \"Suite 200\",\r\n        \"City\": \"Rockhill\",\r\n        \"StateCode\": \"SC\",\r\n        \"ZipCode\": \"29730\"\r\n    }\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{PaywowAPIURL}}user/create-business",
+							"host": [
+								"{{PaywowAPIURL}}user"
+							],
+							"path": [
+								"create-business"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
